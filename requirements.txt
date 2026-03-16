@@ -5,10 +5,8 @@ docstring-parser
 markdown
 mistralai
 openai
-qrcode
 tavily-python>=0.7.12
 textstat
-vertexai
 
 # === Web Framework + API ===
 fastapi
@@ -28,8 +26,8 @@ seaborn
 tabulate
 tinydb
 
-# === Machine Learning / NLP (Optional Enhancements) ===
+# === Machine Learning / NLP ===
 jinja2
 psycopg2-binary
-scikit-learn
 Wikipedia
+pdfminer.six
