@@ -16,9 +16,9 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
 COPY . /app
 
-# Your entrypoint
+# Your entrypoint (shell script)
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh # adds execution permission
 
 EXPOSE 8000 5432
 CMD ["/entrypoint.sh"]

@@ -61,13 +61,13 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 curl -X POST http://localhost:8000/generate_report \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Large Language Models for scientific discovery", "model":"openai:gpt-4o"}'
-# -> {"task_id": "UUID..."}
 ```
 
 ### Poll progress
 
 ```bash
 curl http://localhost:8000/task_progress/<TASK_ID>
+# need to figure how to get the task id 
 ```
 
 ### Final status + report
