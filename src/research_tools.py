@@ -1,45 +1,26 @@
-from typing import List, Dict
+import re
 import requests
+import time
 import xml.etree.ElementTree as ET
+from io import BytesIO
+import os
+from dotenv import load_dotenv
+from tavily import TavilyClient
 from typing import List, Dict, Optional
-import os, re, tempfile
-import requests
-from pdfminer.high_level import extract_text
+import wikipedia
+
+# ----- Session with retries & headers -----
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 session = requests.Session()
 session.headers.update(
     {"User-Agent": "LF-ADP-Agent/1.0 (mailto:your.email@example.com)"}
 )
 
-from typing import List, Dict, Optional
-import os, re, time, tempfile
-import requests
-import xml.etree.ElementTree as ET
-
-# ----- Session with retries & headers -----
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-
-from typing import List, Dict, Optional
-import os, re, time
-import requests
-import xml.etree.ElementTree as ET
-from io import BytesIO
-
-
-from typing import List, Dict, Optional
-import os, re, time
-import requests
-import xml.etree.ElementTree as ET
-from io import BytesIO
-
-# ----- Session with retries & headers -----
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-
 
 def _build_session(
-    user_agent: str = "LF-ADP-Agent/1.0 (mailto:your.email@example.com)",
+        user_agent: str = "LF-ADP-Agent/1.0 (mailto:your.email@example.com)",
 ) -> requests.Session:
     s = requests.Session()
     s.headers.update(
@@ -90,10 +71,10 @@ def _safe_filename(name: str) -> str:
 
 
 def clean_text(s: str) -> str:
-    s = re.sub(r"-\n", "", s)  # "transfor-\nmers" -> "transformers"
-    s = re.sub(r"\r\n|\r", "\n", s)  # normaliza saltos
-    s = re.sub(r"[ \t]+", " ", s)  # colapsa espacios
-    s = re.sub(r"\n{3,}", "\n\n", s)  # no más de 1 línea en blanco seguida
+    s = re.sub(r"-\n", "", s)  # remove syllable split at the end of lines
+    s = re.sub(r"\r\n|\r", "\n", s)
+    s = re.sub(r"[ \t]+", " ", s)
+    s = re.sub(r"\n{3,}", "\n\n", s)  # no more than one blank line
     return s.strip()
 
 
@@ -139,23 +120,14 @@ def maybe_save_pdf(pdf_bytes: bytes, dest_dir: str, filename: str) -> str:
 
 
 # ----- arXiv search -----
-from typing import List, Dict
-import time, requests, xml.etree.ElementTree as ET
-from io import BytesIO
-
-# session = _build_session()
-# ensure_pdf_url(), clean_text(), fetch_pdf_bytes(), pdf_bytes_to_text(), maybe_save_pdf()
-
-
 def arxiv_search_tool(
-    query: str,
-    max_results: int = 3,
+        query: str,
+        max_results: int = 3,
 ) -> List[Dict]:
     """
-    Busca en arXiv y devuelve resultados con `summary` sobrescrito
-    para contener el texto extraído del PDF (full_text si es posible).
+    Search arXiv website
     """
-    # ===== FLAGS INTERNOS =====
+    # ===== INTERNAL FLAGS =====
     _INCLUDE_PDF = True
     _EXTRACT_TEXT = True
     _MAX_PAGES = 6
@@ -182,15 +154,15 @@ def arxiv_search_tool(
 
         for entry in root.findall("atom:entry", ns):
             title = (
-                entry.findtext("atom:title", default="", namespaces=ns) or ""
+                    entry.findtext("atom:title", default="", namespaces=ns) or ""
             ).strip()
             published = (
-                entry.findtext("atom:published", default="", namespaces=ns) or ""
-            )[:10]
+                                entry.findtext("atom:published", default="", namespaces=ns) or ""
+                        )[:10]
             url_abs = entry.findtext("atom:id", default="", namespaces=ns) or ""
             # original abstract
             abstract_summary = (
-                entry.findtext("atom:summary", default="", namespaces=ns) or ""
+                    entry.findtext("atom:summary", default="", namespaces=ns) or ""
             ).strip()
 
             authors = []
@@ -261,19 +233,12 @@ arxiv_tool_def = {
     },
 }
 
-
-## -----
-
-
-import os
-from dotenv import load_dotenv
-from tavily import TavilyClient
-
+# ----- Tavily Search -----
 load_dotenv()  # Loads environment variables from a .env file
 
 
 def tavily_search_tool(
-    query: str, max_results: int = 5, include_images: bool = False
+        query: str, max_results: int = 5, include_images: bool = False
 ) -> list[dict]:
     """
     Perform a search using the Tavily API.
@@ -290,7 +255,7 @@ def tavily_search_tool(
     if not api_key:
         raise ValueError("TAVILY_API_KEY not found in environment variables.")
 
-    client = TavilyClient(api_key, api_base_url=os.getenv("DLAI_TAVILY_BASE_URL"))
+    client = TavilyClient(api_key)
 
     try:
         response = client.search(
@@ -345,12 +310,8 @@ tavily_tool_def = {
     },
 }
 
-## Wikipedia search tool
 
-from typing import List, Dict
-import wikipedia
-
-
+# ----- Wikipedia search tool -----
 def wikipedia_search_tool(query: str, sentences: int = 5) -> List[Dict]:
     """
     Searches Wikipedia for a summary of the given query.
@@ -395,7 +356,6 @@ wikipedia_tool_def = {
         },
     },
 }
-
 
 # Tool mapping
 tool_mapping = {

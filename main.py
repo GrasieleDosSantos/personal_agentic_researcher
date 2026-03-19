@@ -46,12 +46,12 @@ class Task(Base):
 try:
     Base.metadata.drop_all(bind=engine)
 except Exception as e:
-    print(f"\u274c DB creation failed: {e}")
+    print(f"DB creation failed: {e}")
 
 try:
     Base.metadata.create_all(bind=engine)
 except Exception as e:
-    print(f"\u274c DB creation failed: {e}")
+    print(f"DB creation failed: {e}")
 
 # === FastAPI ===
 app = FastAPI()
@@ -94,7 +94,7 @@ def generate_report(req: PromptRequest):
                 "title": step_title,
                 "status": "pending",
                 "description": "Awaiting execution",
-                "substeps": [],
+                "sub-steps": [],
             }
         )
 
@@ -139,7 +139,7 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
             if description:
                 steps_data[index]["description"] = description
             if substep:
-                steps_data[index]["substeps"].append(substep)
+                steps_data[index]["sub-steps"].append(substep)
             steps_data[index]["updated_at"] = datetime.utcnow().isoformat()
 
     try:

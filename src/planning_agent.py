@@ -1,4 +1,5 @@
 import ast
+from datetime import datetime
 import json
 import re
 from typing import List
@@ -27,7 +28,7 @@ def planner_agent(topic: str, model: str = "openai:o4-mini") -> List[str]:
 You are a planning agent responsible for organizing a research workflow using multiple intelligent agents.
 
 🧠 Available agents:
-- Research agent: MUST begin with a broad **web search using Tavily** to identify only **relevant** and **authoritative**
+- Research agent: MUST begin with a broad **web search using Tavily** to identify only **relevant**
 items (e.g., high-impact venues, seminal works, surveys, or recent comprehensive sources). The output of this step MUST
 capture for each candidate: title, authors, year, venue/source, URL, and (if available) DOI.
 - Research agent: AFTER the Tavily step, perform a **targeted arXiv search** ONLY for the candidates discovered in the
@@ -53,10 +54,11 @@ Maximum of 7 steps.
 - Uses all findings and outputs from previous steps
 - Includes inline citations (e.g., [1], (Wikipedia/arXiv))
 - Includes a References section with clickable links for all citations
-- Preserves earlier sources
+- Take feedback from editor agent into account
 - Is detailed and self-contained
 
 Topic: "{topic}"
+Today is {datetime.now().strftime('%Y-%m-%d')}.
 """
 
     response = client.chat.completions.create(
@@ -97,9 +99,12 @@ Topic: "{topic}"
     steps = _coerce_to_list(raw)
 
     # enforce ordering & minimal contract
-    required_first = "Research agent: Use Tavily to perform a broad web search and collect top relevant items (title, authors, year, venue/source, URL, DOI if available)."
-    required_second = "Research agent: For each collected item, search on arXiv to find matching preprints/versions and record arXiv URLs (if they exist)."
-    final_required = "Writer agent: Generate the final comprehensive Markdown report with inline citations and a complete References section with clickable links."
+    required_first = """Research agent: Use Tavily to perform a broad web search and collect top relevant items
+        (title, authors, year, venue/source, URL, DOI if available)."""
+    required_second = """Research agent: For each collected item, search on arXiv to find matching preprints/versions
+        and record arXiv URLs (if they exist)."""
+    final_required = """Writer agent: Generate the final comprehensive Markdown report with inline citations and a
+    complete References section with clickable links."""
 
     def _ensure_contract(steps_list: List[str]) -> List[str]:
         if not steps_list:
@@ -129,8 +134,7 @@ Topic: "{topic}"
         # ensure final step requirement present
         if final_required not in steps_list:
             steps_list.append(final_required)
-        # cap to 7
-        return steps_list[:7]
+        return steps_list
 
     steps = _ensure_contract(steps)
 

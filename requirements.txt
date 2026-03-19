@@ -26,8 +26,10 @@ seaborn
 tabulate
 tinydb
 
-# === Machine Learning / NLP ===
+# === Machine Learning / NLP / Search===
 jinja2
 psycopg2-binary
 Wikipedia
 pdfminer.six
+pymupdf
+tavily
