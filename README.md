@@ -62,12 +62,12 @@ curl -X POST http://localhost:8000/generate_report \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Large Language Models for scientific discovery", "model":"openai:gpt-4o"}'
 ```
+This execution returns the task_id needed for polling the progress and getting the task status.
 
 ### Poll progress
 
 ```bash
 curl http://localhost:8000/task_progress/<TASK_ID>
-# need to figure how to get the task id 
 ```
 
 ### Final status + report
