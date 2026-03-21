@@ -1,5 +1,4 @@
 import ast
-from datetime import datetime
 import json
 import re
 from typing import List
@@ -50,15 +49,13 @@ Maximum of 7 steps.
 "Research agent: For each collected item, search on arXiv to find matching preprints/versions and record arXiv URLs
 (if they exist)."
 
-🔚 The FINAL step MUST instruct the writer agent to generate a comprehensive Markdown report that:
+🔚 The FINAL step MUST instruct the editor agent to generate a comprehensive Markdown report that:
 - Uses all findings and outputs from previous steps
 - Includes inline citations (e.g., [1], (Wikipedia/arXiv))
 - Includes a References section with clickable links for all citations
-- Take feedback from editor agent into account
 - Is detailed and self-contained
 
 Topic: "{topic}"
-Today is {datetime.now().strftime('%Y-%m-%d')}.
 """
 
     response = client.chat.completions.create(
@@ -103,7 +100,7 @@ Today is {datetime.now().strftime('%Y-%m-%d')}.
         (title, authors, year, venue/source, URL, DOI if available)."""
     required_second = """Research agent: For each collected item, search on arXiv to find matching preprints/versions
         and record arXiv URLs (if they exist)."""
-    final_required = """Writer agent: Generate the final comprehensive Markdown report with inline citations and a
+    final_required = """Editor agent: Generate the final comprehensive Markdown report with inline citations and a
     complete References section with clickable links."""
 
     def _ensure_contract(steps_list: List[str]) -> List[str]:
@@ -111,7 +108,7 @@ Today is {datetime.now().strftime('%Y-%m-%d')}.
             return [
                 required_first,
                 required_second,
-                "Research agent: Synthesize and rank findings by relevance, recency, and authority; deduplicate by title/DOI.",
+                "Research agent: Synthesize and rank findings by relevance, recency, authority; deduplicate by title/DOI.",
                 "Writer agent: Draft a structured outline based on the ranked evidence.",
                 "Editor agent: Review for coherence, coverage, and citation completeness; request fixes.",
                 final_required,
@@ -143,7 +140,7 @@ Today is {datetime.now().strftime('%Y-%m-%d')}.
 
 def executor_agent_step(step_title: str, history: list, prompt: str):
     """
-    Executes a step of the executor agent.
+    Executes a step of the planning agent.
     Returns:
         - step_title (str)
         - agent_name (str)
@@ -160,11 +157,11 @@ def executor_agent_step(step_title: str, history: list, prompt: str):
         elif "research" in desc.lower() or agent == "research_agent":
             context += f"\n🔍 Research (Step {i + 1}):\n{output.strip()}\n"
         else:
-            context += f"\n🧩 Other (Step {i + 1}) by {agent}:\n{output.strip()}\n"
+            context += f"\n Other (Step {i + 1}) by {agent}:\n{output.strip()}\n"
 
     enriched_task = f"""{context}
 
-🧩 Your next task:
+Your next task:
 {step_title}
 """
 
