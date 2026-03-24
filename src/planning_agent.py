@@ -40,14 +40,7 @@ Do NOT run a generic arXiv search detached from the Tavily results.
 Each step must be atomic, actionable, and assigned to one of the agents.
 Maximum of 7 steps.
 
-🚫 DO NOT include steps like “create CSV”, “set up repo”, “install packages”.
-✅ Focus on meaningful research tasks (search, extract, rank, draft, revise).
-✅ The FIRST step MUST be exactly: 
-"Research agent: Use Tavily to perform a broad web search and collect top relevant items
-(title, authors, year, venue/source, URL, DOI if available)."
-✅ The SECOND step MUST be exactly:
-"Research agent: For each collected item, search on arXiv to find matching preprints/versions and record arXiv URLs
-(if they exist)."
+ ✅ Focus on meaningful research tasks (search, extract, rank, draft, revise).
 
 🔚 The FINAL step MUST instruct the editor agent to generate a comprehensive Markdown report that:
 - Uses all findings and outputs from previous steps
