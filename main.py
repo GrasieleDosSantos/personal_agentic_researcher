@@ -59,7 +59,7 @@ app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+#templates = Jinja2Templates(directory="templates")
 
 task_progress = {}
 
@@ -67,10 +67,10 @@ task_progress = {}
 class PromptRequest(BaseModel):
     prompt: str
 
-
 @app.get("/", response_class=HTMLResponse)
 def read_index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    templates = Jinja2Templates(directory="templates")  # fresh instance
+    return templates.TemplateResponse({"request": request}, "index.html")
 
 
 @app.get("/api", response_class=JSONResponse)
