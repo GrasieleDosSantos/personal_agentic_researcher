@@ -1,6 +1,6 @@
 from datetime import datetime
 from aisuite import Client
-from src.research_tools import (
+from .research_tools import (
     arxiv_search_tool,
     tavily_search_tool,
     wikipedia_search_tool,

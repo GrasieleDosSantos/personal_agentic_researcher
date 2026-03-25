@@ -5,7 +5,7 @@ from typing import List
 
 from aisuite import Client
 
-from src.agents import (
+from .agents import (
     research_agent,
     writer_agent,
     editor_agent,

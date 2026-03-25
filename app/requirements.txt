@@ -15,20 +15,12 @@ pydantic[email]
 python-dotenv
 python-multipart
 requests
-sqlalchemy
+sqlalchemy==2.0.29
 uvicorn
-
-# === Data Analysis / Display (Optional Enhancements) ===
-duckdb
-matplotlib
-pandas
-seaborn
-tabulate
-tinydb
 
 # === Machine Learning / NLP / Search===
 jinja2==3.1.4
-psycopg2-binary
+psycopg2-binary==2.9.11
 Wikipedia
 pdfminer.six
 pymupdf
