@@ -1,10 +1,14 @@
-# Personal Agentic Researcher
-Agentic system that acts as a personal researcher, capable of accessing different sources (Tavily, arXiv, Wikipedia) to provide state-of-the-art reports on diverse scientific topics.
+# Agentic Researcher
+Agentic system that acts as a personal researcher, capable of accessing different sources (Tavily, arXiv, Wikipedia)
+to provide state-of-the-art reports on diverse scientific topics.
 Deployed locally as a FastAPI web app that stores task state/results in Postgres. This setup 
 includes a docker compose structure that manages the two distinct components: a Postgres
 container created from an image from Docker Hub and our own web app container.
 
-![architecture.png](images/architecture.png)
+<div style="text-align: center;">
+  <img src="images/architecture.png" alt="Figure" width="600">
+  <p><em>Figure 1: Agentic workflow diagram.</em></p>
+</div>
 
 ## Features
 
@@ -62,7 +66,8 @@ fastapi_app  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to
 ```bash
 docker compose down -v
 ```
-The `-v` flag tells docker to also remove the volume created to persist the data.
+The `-v` flag tells docker to also remove the volume created to persist the data. Omit it
+if you want to keep the data.
 
 ---
 
