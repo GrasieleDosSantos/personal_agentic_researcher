@@ -154,9 +154,9 @@ def executor_agent_step(step_title: str, history: list, prompt: str):
 
     enriched_task = f"""{context}
 
-Your next task:
-{step_title}
-"""
+    Your next task:
+    {step_title}
+    """
 
     # select agent based on step
     step_lower = step_title.lower()

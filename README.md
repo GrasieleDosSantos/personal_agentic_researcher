@@ -12,10 +12,10 @@ container created from an image from Docker Hub and our own web app container.
 
 ## Features
 
-* `/` serves a simple UI (Jinja2 template) to kick off a research task.
 * `/generate_report` kicks off a threaded, multi-step agent workflow (planner → research/writer/editor).
 * `/task_progress/{task_id}` live status for each step/sub-step.
 * `/task_status/{task_id}` final status + report.
+* `/report/{task_id}/md` download report in Markdown format.
 
 ## Prerequisites
 
@@ -58,7 +58,6 @@ fastapi_app  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to
 
 ### 2) Open the app
 
-* UI: [http://localhost:8000/](http://localhost:8000/)
 * Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ### 3) Stop and remove the containers
@@ -66,7 +65,7 @@ fastapi_app  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to
 ```bash
 docker compose down -v
 ```
-The `-v` flag tells docker to also remove the volume created to persist the data. Omit it
+The `-v` flag tells docker to also remove the volume(s) created to persist the data. Omit it
 if you want to keep the data.
 
 ---
@@ -92,4 +91,10 @@ curl http://localhost:8000/task_progress/<TASK_ID>
 
 ```bash
 curl http://localhost:8000/task_status/<TASK_ID>
+```
+
+### Download report in Markdown format
+
+```bash
+curl http://localhost:8000/report/<TASK_ID>/md
 ```

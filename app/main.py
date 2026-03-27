@@ -3,10 +3,9 @@ import uuid
 import json
 import threading
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Text, DateTime, String
@@ -58,8 +57,6 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
-app.mount("/static", StaticFiles(directory="static"), name="static")
-#templates = Jinja2Templates(directory="templates")
 
 task_progress = {}
 
@@ -67,13 +64,7 @@ task_progress = {}
 class PromptRequest(BaseModel):
     prompt: str
 
-@app.get("/", response_class=HTMLResponse)
-def read_index(request: Request):
-    templates = Jinja2Templates(directory="templates")  # fresh instance
-    return templates.TemplateResponse({"request": request}, "index.html")
-
-
-@app.get("/api", response_class=JSONResponse)
+@app.get("/", response_class=JSONResponse)
 def health_check():
     return {"status": "ok"}
 
@@ -122,6 +113,19 @@ def get_task_status(task_id: str):
         "result": json.loads(task.result) if task.result else None,
     }
 
+@app.get("/report/{task_id}/md")
+def get_markdown(task_id: str):
+    file_path = f"/app/reports/{task_id}.md"
+
+    if not os.path.exists(file_path):
+        return {"error": "Markdown file not found"}
+
+    return FileResponse(
+        file_path,
+        media_type="text/markdown",
+        filename=f"{task_id}.md"
+    )
+
 
 def format_history(history):
     return "\n\n".join(
@@ -130,6 +134,7 @@ def format_history(history):
 
 
 def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
+    print(f"[START] Task {task_id}")
     steps_data = task_progress[task_id]["steps"]
     execution_history = []
 
@@ -188,6 +193,7 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
 
         result = {"html_report": final_report_markdown, "history": steps_data}
 
+        print(f"[DONE] Task {task_id}, saving result to database")
         db = SessionLocal()
         task = db.query(Task).filter(Task.id == task_id).first()
         task.status = "done"
@@ -195,6 +201,17 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
         task.updated_at = datetime.utcnow()
         db.commit()
         db.close()
+        print(f"[SUCCESS] Task {task_id} saved to database")
+
+        print(f"Saving report to app volume")
+        os.makedirs("/app/reports", exist_ok=True)
+
+        md_path = f"/app/reports/{task_id}.md"
+
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(final_report_markdown)
+
+        print(f"[FILE SAVED] {md_path}")
 
     except Exception as exc:
         print(f"Workflow error for task {task_id}: {exc}")
