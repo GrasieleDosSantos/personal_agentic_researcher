@@ -5,13 +5,14 @@ from .research_tools import (
     tavily_search_tool,
     wikipedia_search_tool,
 )
+from .plan_logic import DEFAULT_AGENT_MODEL
 
 client = Client()
 
 
 # === Research Agent ===
 def research_agent(
-    prompt: str, model: str = "openai:gpt-4.1-mini",
+    prompt: str, model: str = DEFAULT_AGENT_MODEL,
 ):
     print("==================================")
     print("🔍 Research Agent")
@@ -154,7 +155,7 @@ USER RESEARCH REQUEST:
 
 def writer_agent(
     prompt: str,
-    model: str = "openai:gpt-4.1-mini",
+    model: str = DEFAULT_AGENT_MODEL,
     max_tokens: int = 15000,
 ):
     print("==================================")
@@ -241,7 +242,7 @@ INTERNAL CHECKLIST (DO NOT INCLUDE IN OUTPUT):
 
 def editor_agent(
     prompt: str,
-    model: str = "openai:gpt-4.1-mini",
+    model: str = DEFAULT_AGENT_MODEL,
 ):
     print("==================================")
     print("🧠 Editor Agent")
@@ -284,6 +285,6 @@ Return only the revised, polished text in Markdown format without explanatory co
         model=model, messages=messages, temperature=0
     )
 
-    content = response.choices[0].message.content
+    content = response.choices[0].message.content or ""
     print("✅ Output:\n", content)
     return content, messages

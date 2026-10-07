@@ -7,23 +7,26 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from typing import Optional
+
+from pydantic import BaseModel, field_validator
 from sqlalchemy import create_engine, Column, Text, DateTime, String
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
 from src.planning_agent import planner_agent, executor_agent_step
+from src.plan_logic import DEFAULT_AGENT_MODEL, DEFAULT_PLANNER_MODEL, HistoryEntry
 
 # === Load env vars ===
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL not set")
+
 # Fix for Heroku's postgres:// URL format
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL not set")
 
 
 # === DB setup ===
@@ -43,14 +46,21 @@ class Task(Base):
 
 
 try:
-    Base.metadata.drop_all(bind=engine)
-except Exception as e:
-    print(f"DB creation failed: {e}")
-
-try:
     Base.metadata.create_all(bind=engine)
 except Exception as e:
     print(f"DB creation failed: {e}")
+
+# Tasks still "running" belong to worker threads of a previous process, which
+# are gone; mark them as failed so they don't stay "running" forever.
+try:
+    db = SessionLocal()
+    db.query(Task).filter(Task.status == "running").update(
+        {"status": "error", "updated_at": datetime.utcnow()}
+    )
+    db.commit()
+    db.close()
+except Exception as e:
+    print(f"Failed to reset interrupted tasks: {e}")
 
 # === FastAPI ===
 app = FastAPI()
@@ -63,6 +73,18 @@ task_progress = {}
 
 class PromptRequest(BaseModel):
     prompt: str
+    model: Optional[str] = None  # research/writer/editor agents
+    planner_model: Optional[str] = None
+
+    @field_validator("model", "planner_model")
+    @classmethod
+    def check_model_format(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        provider, sep, name = v.partition(":")
+        if not sep or not provider or not name:
+            raise ValueError("model must be in 'provider:model' form, e.g. 'openai:gpt-4o'")
+        return v
 
 @app.get("/", response_class=JSONResponse)
 def health_check():
@@ -77,8 +99,21 @@ def generate_report(req: PromptRequest):
     db.commit()
     db.close()
 
+    model = req.model or DEFAULT_AGENT_MODEL
+    planner_model = req.planner_model or DEFAULT_PLANNER_MODEL
+
     task_progress[task_id] = {"steps": []}
-    initial_plan_steps = planner_agent(req.prompt)
+    try:
+        initial_plan_steps = planner_agent(req.prompt, model=planner_model)
+    except Exception as exc:
+        db = SessionLocal()
+        task = db.query(Task).filter(Task.id == task_id).first()
+        task.status = "error"
+        task.updated_at = datetime.utcnow()
+        db.commit()
+        db.close()
+        raise HTTPException(status_code=502, detail=f"Planner failed: {exc}")
+
     for step_title in initial_plan_steps:
         task_progress[task_id]["steps"].append(
             {
@@ -90,7 +125,8 @@ def generate_report(req: PromptRequest):
         )
 
     thread = threading.Thread(
-        target=run_agent_workflow, args=(task_id, req.prompt, initial_plan_steps)
+        target=run_agent_workflow,
+        args=(task_id, req.prompt, initial_plan_steps, model, planner_model),
     )
     thread.start()
     return {"task_id": task_id}
@@ -129,11 +165,17 @@ def get_markdown(task_id: str):
 
 def format_history(history):
     return "\n\n".join(
-        f"🔹 {title}\n{desc}\n\n📝 Output:\n{output}" for title, desc, output in history
+        f"🔹 {title}\n{agent}\n\n📝 Output:\n{output}" for title, agent, output in history
     )
 
 
-def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
+def run_agent_workflow(
+    task_id: str,
+    prompt: str,
+    initial_plan_steps: list,
+    model: str = DEFAULT_AGENT_MODEL,
+    planner_model: str = DEFAULT_PLANNER_MODEL,
+):
     print(f"[START] Task {task_id}")
     steps_data = task_progress[task_id]["steps"]
     execution_history = []
@@ -152,10 +194,10 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
             update_step_status(i, "running", f"Executing: {plan_step_title}")
 
             actual_step_description, agent_name, output = executor_agent_step(
-                plan_step_title, execution_history, prompt
+                plan_step_title, execution_history, prompt, model=model
             )
 
-            execution_history.append([plan_step_title, actual_step_description, output])
+            execution_history.append(HistoryEntry(plan_step_title, agent_name, output))
 
             # ...
             update_step_status(
@@ -188,10 +230,15 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
             )
 
         final_report_markdown = (
-            execution_history[-1][-1] if execution_history else "No report generated."
+            execution_history[-1].output if execution_history else "No report generated."
         )
 
-        result = {"html_report": final_report_markdown, "history": steps_data}
+        result = {
+            "html_report": final_report_markdown,
+            "history": steps_data,
+            "model": model,
+            "planner_model": planner_model,
+        }
 
         print(f"[DONE] Task {task_id}, saving result to database")
         db = SessionLocal()
