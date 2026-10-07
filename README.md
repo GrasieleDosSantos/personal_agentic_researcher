@@ -66,7 +66,14 @@ fastapi_app  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to
 docker compose down -v
 ```
 The `-v` flag tells docker to also remove the volume(s) created to persist the data. Omit it
-if you want to keep the data.
+if you want to keep the data. Tasks and their results persist across app restarts; tasks that were
+still running when the app stopped are marked as `error` on the next startup.
+
+### 4) Run the tests
+
+```bash
+docker compose run --rm app sh -c "pip install -r requirements-dev.txt && python -m pytest -q"
+```
 
 ---
 
@@ -80,6 +87,18 @@ curl -X POST http://localhost:8000/generate_report \
   -d '{"prompt": "Large Language Models for scientific discovery", "model":"openai:gpt-4o"}'
 ```
 This execution returns the task_id needed for polling the progress and getting the task status.
+
+Request fields:
+
+| Field           | Required | Default               | Description                                   |
+|-----------------|----------|-----------------------|-----------------------------------------------|
+| `prompt`        | yes      |                       | Research topic                                |
+| `model`         | no       | `openai:gpt-4.1-mini` | Model for the research, writer and editor agents |
+| `planner_model` | no       | `openai:o4-mini`      | Model for the planner                         |
+
+Models use the [aisuite](https://github.com/andrewyng/aisuite) `provider:model` format; other values
+are rejected with a 422. The agents call the model with `temperature=0` (and the writer sets `max_tokens`),
+so `model` should be a regular chat model — OpenAI o-series reasoning models reject these parameters.
 
 ### Poll progress
 
